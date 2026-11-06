@@ -1,0 +1,154 @@
+name: build
+
+on:
+  schedule:
+    - cron: "17 2 * * *"   # daily: build new upstream releases
+    - cron: "47 3 * * 6"   # Saturday: rebuild everything (base image updates)
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Apps to consider (space-separated, empty = all)"
+        required: false
+        default: ""
+      force:
+        description: "Rebuild even if the version already exists"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "servarr/**"
+      - "sabnzbd/**"
+      - "seerr/**"
+      - "homepage/**"
+      - "apps.json"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.check.outputs.matrix }}
+      count: ${{ steps.check.outputs.count }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPS: ${{ github.event.inputs.apps }}
+          FORCE: ${{ github.event.inputs.force == 'true' || github.event.schedule == '47 3 * * 6' || github.event_name == 'push' }}
+        run: |
+          matrix=$(python3 scripts/check.py)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$matrix" | python3 -c 'import json,sys;print(len(json.load(sys.stdin)["include"]))')" >> "$GITHUB_OUTPUT"
+          echo "$matrix" | python3 -m json.tool
+
+  build:
+    needs: check
+    if: needs.check.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.check.outputs.matrix) }}
+    name: ${{ matrix.app }} ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check out upstream source
+        if: matrix.source
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ matrix.upstream }}
+          ref: ${{ matrix.tag }}
+          path: src
+
+      - name: Build arguments
+        id: args
+        run: |
+          {
+            echo "args<<EOF"
+            echo "${{ matrix.build_args }}"
+            if [ "${{ matrix.source }}" = "true" ]; then
+              rev=$(git -C src rev-parse HEAD)
+              echo "COMMIT_TAG=$rev"
+              echo "REVISION=$rev"
+              echo "VERSION=${{ matrix.tag }}"
+              echo "BUILDTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build for linux/arm/v7
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm/v7
+          build-args: ${{ steps.args.outputs.args }}
+          load: true
+          tags: local/${{ matrix.app }}:test
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+      - name: Smoke test (start under emulation, wait for HTTP)
+        run: |
+          docker run -d --name smoke --platform linux/arm/v7 \
+            -e HOMEPAGE_ALLOWED_HOSTS='*' -e TZ=Europe/Vienna \
+            -p ${{ matrix.port }}:${{ matrix.port }} local/${{ matrix.app }}:test
+          for i in $(seq 1 120); do
+            if curl -fsS -o /dev/null "http://127.0.0.1:${{ matrix.port }}${{ matrix.health }}"; then
+              echo "up after $((i*5))s"; docker logs smoke 2>&1 | tail -20; exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]; then
+              echo "container exited"; break
+            fi
+            sleep 5
+          done
+          docker logs smoke 2>&1 | tail -100
+          exit 1
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm/v7
+          build-args: ${{ steps.args.outputs.args }}
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:${{ matrix.version }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ matrix.version }}
+            org.opencontainers.image.title=${{ matrix.app }}
+            org.opencontainers.image.description=${{ matrix.app }} ${{ matrix.version }} for linux/arm/v7, built from https://github.com/${{ matrix.upstream }}
+          cache-from: type=gha,scope=${{ matrix.app }}

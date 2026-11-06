@@ -1,0 +1,44 @@
+{
+  "sonarr": {
+    "upstream": "Sonarr/Sonarr",
+    "context": "servarr",
+    "dockerfile": "servarr/Dockerfile",
+    "port": 8989,
+    "health": "/ping",
+    "build_args": {"APP": "Sonarr", "BRANCH": "main", "ASSET": "linux-arm", "PORT": "8989"}
+  },
+  "radarr": {
+    "upstream": "Radarr/Radarr",
+    "context": "servarr",
+    "dockerfile": "servarr/Dockerfile",
+    "port": 7878,
+    "health": "/ping",
+    "build_args": {"APP": "Radarr", "BRANCH": "master", "ASSET": "linux-core-arm", "PORT": "7878"}
+  },
+  "sabnzbd": {
+    "upstream": "sabnzbd/sabnzbd",
+    "context": "sabnzbd",
+    "dockerfile": "sabnzbd/Dockerfile",
+    "port": 8080,
+    "health": "/api?mode=version",
+    "build_args": {}
+  },
+  "seerr": {
+    "upstream": "seerr-team/seerr",
+    "source": true,
+    "context": "src",
+    "dockerfile": "seerr/Dockerfile",
+    "port": 5055,
+    "health": "/api/v1/status",
+    "build_args": {}
+  },
+  "homepage": {
+    "upstream": "gethomepage/homepage",
+    "source": true,
+    "context": "src",
+    "dockerfile": "homepage/Dockerfile",
+    "port": 3000,
+    "health": "/api/healthcheck",
+    "build_args": {}
+  }
+}
