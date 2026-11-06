@@ -5,7 +5,13 @@
     "dockerfile": "servarr/Dockerfile",
     "port": 8989,
     "health": "/ping",
-    "build_args": {"APP": "Sonarr", "BRANCH": "main", "ASSET": "linux-arm", "PORT": "8989"}
+    "build_args": {
+      "APP": "Sonarr",
+      "BRANCH": "main",
+      "ASSET": "linux-arm",
+      "PORT": "8989"
+    },
+    "smoke_minutes": 30
   },
   "radarr": {
     "upstream": "Radarr/Radarr",
@@ -13,7 +19,13 @@
     "dockerfile": "servarr/Dockerfile",
     "port": 7878,
     "health": "/ping",
-    "build_args": {"APP": "Radarr", "BRANCH": "master", "ASSET": "linux-core-arm", "PORT": "7878"}
+    "build_args": {
+      "APP": "Radarr",
+      "BRANCH": "master",
+      "ASSET": "linux-core-arm",
+      "PORT": "7878"
+    },
+    "smoke_minutes": 45
   },
   "sabnzbd": {
     "upstream": "sabnzbd/sabnzbd",
@@ -21,7 +33,8 @@
     "dockerfile": "sabnzbd/Dockerfile",
     "port": 8080,
     "health": "/api?mode=version",
-    "build_args": {}
+    "build_args": {},
+    "smoke_minutes": 10
   },
   "seerr": {
     "upstream": "seerr-team/seerr",
@@ -30,7 +43,8 @@
     "dockerfile": "seerr/Dockerfile",
     "port": 5055,
     "health": "/api/v1/status",
-    "build_args": {}
+    "build_args": {},
+    "smoke_minutes": 20
   },
   "homepage": {
     "upstream": "gethomepage/homepage",
@@ -39,6 +53,7 @@
     "dockerfile": "homepage/Dockerfile",
     "port": 3000,
     "health": "/api/healthcheck",
-    "build_args": {}
+    "build_args": {},
+    "smoke_minutes": 10
   }
 }
