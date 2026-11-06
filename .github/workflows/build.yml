@@ -111,13 +111,16 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
 
-      - name: Smoke test (start under emulation, wait for HTTP)
+      - name: Smoke test (start under emulation, wait for HTTP or a log line)
+        env:
+          SMOKE_LOG: ${{ matrix.smoke_log }}
         run: |
           docker run -d --name smoke --platform linux/arm/v7 \
             -e HOMEPAGE_ALLOWED_HOSTS='*' -e TZ=Europe/Vienna \
             -p ${{ matrix.port }}:${{ matrix.port }} local/${{ matrix.app }}:test
           for i in $(seq 1 $(( ${{ matrix.smoke_minutes }} * 12 ))); do
-            if curl -fsS -o /dev/null "http://127.0.0.1:${{ matrix.port }}${{ matrix.health }}"; then
+            if { [ -n "$SMOKE_LOG" ] && docker logs smoke 2>&1 | grep -qE "$SMOKE_LOG"; } || \
+               { [ -z "$SMOKE_LOG" ] && curl -fsS -o /dev/null "http://127.0.0.1:${{ matrix.port }}${{ matrix.health }}"; }; then
               echo "up after $((i*5))s"; sleep 30
               docker logs smoke 2>&1 | tail -20
               if docker logs smoke 2>&1 | grep -E "RemoteCertificateChainErrors|Unhandled Rejection|Traceback \(most recent"; then

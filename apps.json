@@ -11,7 +11,7 @@
       "ASSET": "linux-arm",
       "PORT": "8989"
     },
-    "smoke_minutes": 30
+    "smoke_minutes": 15
   },
   "radarr": {
     "upstream": "Radarr/Radarr",
@@ -25,7 +25,9 @@
       "ASSET": "linux-core-arm",
       "PORT": "7878"
     },
-    "smoke_minutes": 45
+    "smoke_minutes": 10,
+    "smoke_log": "Starting migration of Main DB to [0-9]+",
+    "smoke_note": "Radarr's DB migration 142 hangs under QEMU (works on real armv7 hardware), so only startup is checked."
   },
   "sabnzbd": {
     "upstream": "sabnzbd/sabnzbd",

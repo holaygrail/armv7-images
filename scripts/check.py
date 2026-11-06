@@ -72,6 +72,7 @@ def main():
             "port": app["port"],
             "health": app["health"],
             "smoke_minutes": app.get("smoke_minutes", 10),
+            "smoke_log": app.get("smoke_log", ""),
             "build_args": "\n".join(f"{k}={v}" for k, v in args.items()),
         })
     print(json.dumps({"include": matrix}))
