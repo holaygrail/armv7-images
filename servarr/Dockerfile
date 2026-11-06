@@ -1,5 +1,7 @@
 # Sonarr / Radarr for linux/arm/v7, built from the official release tarball.
-FROM debian:trixie-slim
+# Debian 12, not 13: Debian 13 moved armhf to 64-bit time_t (libssl3t64),
+# which breaks TLS certificate validation in the bundled .NET runtime.
+FROM debian:bookworm-slim
 
 ARG APP
 ARG VERSION
@@ -8,7 +10,7 @@ ARG ASSET
 ARG PORT
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl libicu76 libsqlite3-0 tini tzdata \
+ && apt-get install -y --no-install-recommends ca-certificates curl libicu72 libsqlite3-0 tini tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /app/bin \
