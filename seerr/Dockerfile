@@ -67,7 +67,7 @@ ENV NODE_ENV=production \
     COMMIT_TAG=${COMMIT_TAG}
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends tini tzdata wget \
+ && apt-get install -y --no-install-recommends tzdata wget \
  && rm -rf /var/lib/apt/lists/*
 
 USER node:node
@@ -84,5 +84,4 @@ RUN touch config/DOCKER \
 EXPOSE 5055
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s \
   CMD wget -q --spider "http://127.0.0.1:${PORT:-5055}/api/v1/status" || exit 1
-ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["npm", "start"]
