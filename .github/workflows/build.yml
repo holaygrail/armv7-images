@@ -118,7 +118,12 @@ jobs:
             -p ${{ matrix.port }}:${{ matrix.port }} local/${{ matrix.app }}:test
           for i in $(seq 1 $(( ${{ matrix.smoke_minutes }} * 12 ))); do
             if curl -fsS -o /dev/null "http://127.0.0.1:${{ matrix.port }}${{ matrix.health }}"; then
-              echo "up after $((i*5))s"; docker logs smoke 2>&1 | tail -20; exit 0
+              echo "up after $((i*5))s"; sleep 30
+              docker logs smoke 2>&1 | tail -20
+              if docker logs smoke 2>&1 | grep -E "RemoteCertificateChainErrors|Unhandled Rejection|Traceback \(most recent"; then
+                echo "errors in startup log"; exit 1
+              fi
+              exit 0
             fi
             if [ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]; then
               echo "container exited"; break
