@@ -57,5 +57,14 @@
     "health": "/api/healthcheck",
     "build_args": {},
     "smoke_minutes": 10
+  },
+  "jellyfin": {
+    "upstream": "jellyfin/jellyfin",
+    "context": "jellyfin",
+    "dockerfile": "jellyfin/Dockerfile",
+    "port": 8096,
+    "health": "/health",
+    "build_args": {},
+    "smoke_minutes": 30
   }
 }
