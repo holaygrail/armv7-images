@@ -83,5 +83,5 @@ RUN touch config/DOCKER \
 
 EXPOSE 5055
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s \
-  CMD wget -q --spider "http://127.0.0.1:${PORT:-5055}/api/v1/status" || exit 1
+  CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-5055}/api/v1/status" || exit 1
 CMD ["npm", "start"]

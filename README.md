@@ -29,7 +29,8 @@ Sonarr, Radarr, SABnzbd and Jellyfin follow the linuxserver.io conventions: conf
 updates as "update via Docker".
 
 Seerr and Homepage behave like their upstream images (Seerr: `/app/config`,
-runs as uid 1000; Homepage: `/app/config`, `PUID`/`PGID`,
+runs as uid 1000, Debian-based, so a compose healthcheck must use
+`wget -q -O /dev/null` instead of `wget --spider`; Homepage: `/app/config`, `PUID`/`PGID`,
 `HOMEPAGE_ALLOWED_HOSTS`).
 
 Seerr and Homepage need Node.js 22, the last Node.js line with armv7 images
