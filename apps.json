@@ -11,7 +11,9 @@
       "ASSET": "linux-arm",
       "PORT": "8989"
     },
-    "smoke_minutes": 15
+    "smoke_minutes": 10,
+    "smoke_log": "Starting migration of Main DB to [0-9]+",
+    "smoke_note": "QEMU occasionally crashes (thumb_tr_translate_insn assertion) while running Sonarr; startup is checked via the log."
   },
   "radarr": {
     "upstream": "Radarr/Radarr",
