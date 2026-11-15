@@ -21,6 +21,7 @@ on:
       - "sabnzbd/**"
       - "seerr/**"
       - "homepage/**"
+      - "jellyfin/**"
       - "apps.json"
 
 permissions:

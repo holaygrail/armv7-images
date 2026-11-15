@@ -9,6 +9,7 @@ official or popular images dropped armv7 support.
 | `ghcr.io/holaygrail/radarr` | Official [Radarr](https://github.com/Radarr/Radarr) `linux-core-arm` release |
 | `ghcr.io/holaygrail/sabnzbd` | Official [SABnzbd](https://github.com/sabnzbd/sabnzbd) source release + [par2cmdline-turbo](https://github.com/animetosho/par2cmdline-turbo) |
 | `ghcr.io/holaygrail/seerr` | [Seerr](https://github.com/seerr-team/seerr) source tag (upstream Dockerfile, adapted) |
+| `ghcr.io/holaygrail/jellyfin` | [Jellyfin](https://github.com/jellyfin/jellyfin) + [jellyfin-web](https://github.com/jellyfin/jellyfin-web) source tags, cross-compiled for `linux-arm`, Debian ffmpeg |
 | `ghcr.io/holaygrail/homepage` | [Homepage](https://github.com/gethomepage/homepage) source tag (upstream Dockerfile, adapted) |
 
 Tags: `latest` and the upstream version (e.g. `sonarr:4.0.20.3014`).
@@ -23,7 +24,7 @@ Watchtower keep them current.
 
 ## Usage
 
-Sonarr, Radarr and SABnzbd follow the linuxserver.io conventions: config in
+Sonarr, Radarr, SABnzbd and Jellyfin follow the linuxserver.io conventions: config in
 `/config`, `PUID`/`PGID` (default 1000) and `TZ`. Sonarr and Radarr report
 updates as "update via Docker".
 
