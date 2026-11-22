@@ -62,6 +62,8 @@
     "dockerfile": "jellyfin/Dockerfile",
     "port": 8096,
     "health": "/health",
+    "smoke_log": "Main: Startup complete",
+    "smoke_note": "/health is already answered by the setup server during startup, so wait for the end of startup.",
     "build_args": {},
     "smoke_minutes": 30
   }

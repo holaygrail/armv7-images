@@ -15,10 +15,10 @@ official or popular images dropped armv7 support.
 ## How it works
 
 A GitHub Actions workflow runs daily, checks the latest upstream release of
-each app and builds any version that is not published yet. Every image is
-started under QEMU and must answer on its HTTP port before it is pushed
-(Sonarr, Radarr and Jellyfin: must reach a startup log line instead, because
-they hang or crash later in startup under QEMU only; real hardware is fine).
+each app and builds any version that is not published yet. It runs on
+GitHub's arm64 runners, which execute 32-bit ARM code natively (no QEMU).
+Every image is started and must answer on its HTTP port (Jellyfin: finish its
+startup) before exactly that image is pushed.
 An image is also rebuilt when one of its inputs changes (a base image
 update, its Dockerfile or build arguments), so tools like Watchtower keep them
 current without restarting containers for nothing.
