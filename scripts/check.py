@@ -22,7 +22,7 @@ from pathlib import Path
 
 INPUTS_LABEL = "io.github.holaygrail.armv7.inputs"
 RUNTIME_PLATFORM = ("arm", "v7")
-BUILD_PLATFORM = ("amd64", None)  # GitHub's ubuntu-latest runners
+BUILD_PLATFORM = ("arm64", None)  # GitHub's ubuntu-24.04-arm runners
 
 
 def gh(path):

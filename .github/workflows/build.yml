@@ -63,7 +63,9 @@ jobs:
   build:
     needs: check
     if: needs.check.outputs.count != '0'
-    runs-on: ubuntu-latest
+    # Arm64 runner (Neoverse-N2) executes 32-bit ARM code natively: arm/v7
+    # stages and the smoke test run without QEMU emulation.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -96,9 +98,9 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm
+      - name: Check native 32-bit ARM support
+        run: docker run --rm --platform linux/arm/v7 debian:bookworm-slim dpkg --print-architecture | grep -qx armhf
+
       - uses: docker/setup-buildx-action@v4
 
       - name: Build for linux/arm/v7
@@ -119,7 +121,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
 
-      - name: Smoke test (start under emulation, wait for HTTP or a log line)
+      - name: Smoke test (start, wait for HTTP or a log line)
         env:
           SMOKE_LOG: ${{ matrix.smoke_log }}
           SMOKE_MAY_EXIT: ${{ matrix.smoke_may_exit }}
@@ -137,7 +139,7 @@ jobs:
                 if [ "$SMOKE_MAY_EXIT" != "true" ] && [ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]; then
                   echo "container exited after startup"; return 1
                 fi
-                if docker logs smoke 2>&1 | grep -E "RemoteCertificateChainErrors|SSL connection could not be established|Unhandled Rejection|Traceback \(most recent"; then
+                if docker logs smoke 2>&1 | grep -E "RemoteCertificateChainErrors|SSL connection could not be established|Unhandled Rejection|Unhandled exception\.|Process terminated|Traceback \(most recent"; then
                   echo "errors in startup log"; return 1
                 fi
                 return 0
@@ -150,17 +152,10 @@ jobs:
             docker logs smoke 2>&1 | tail -60
             return 1
           }
-          for attempt in 1 2; do
-            if smoke; then exit 0; fi
-            # QEMU itself sometimes crashes when emulating 32-bit ARM; retry once in that case.
-            if docker logs smoke 2>&1 | grep -q "target/arm/tcg/translate.c"; then
-              echo "QEMU crash (attempt $attempt), retrying"; continue
-            fi
-            exit 1
-          done
-          exit 1
+          smoke
 
       - uses: docker/login-action@v4
+        if: github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -169,6 +164,7 @@ jobs:
       # Push exactly the image that passed the smoke test. The dated tag (one per
       # build day) stays as rollback point: pin it instead of :latest.
       - name: Push
+        if: github.ref == 'refs/heads/main'
         run: |
           image=${{ env.IMAGE_PREFIX }}/${{ matrix.app }}
           for tag in "${{ matrix.version }}" "${{ matrix.version }}-$(date -u +%Y%m%d)" latest; do
