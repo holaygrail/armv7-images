@@ -18,7 +18,9 @@ Tags: `latest` and the upstream version (e.g. `sonarr:4.0.20.3014`).
 
 A GitHub Actions workflow runs daily, checks the latest upstream release of
 each app and builds any version that is not published yet. Every image is
-started under QEMU and must answer on its HTTP port before it is pushed.
+started under QEMU and must answer on its HTTP port before it is pushed
+(Sonarr, Radarr and Jellyfin: must reach a startup log line instead, because
+they hang or crash later in startup under QEMU only; real hardware is fine).
 All images are rebuilt weekly to pick up base-image updates, so tools like
 Watchtower keep them current.
 
