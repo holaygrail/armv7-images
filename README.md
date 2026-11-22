@@ -12,8 +12,6 @@ official or popular images dropped armv7 support.
 | `ghcr.io/holaygrail/jellyfin` | [Jellyfin](https://github.com/jellyfin/jellyfin) + [jellyfin-web](https://github.com/jellyfin/jellyfin-web) source tags, cross-compiled for `linux-arm`, Debian ffmpeg |
 | `ghcr.io/holaygrail/homepage` | [Homepage](https://github.com/gethomepage/homepage) source tag (upstream Dockerfile, adapted) |
 
-Tags: `latest` and the upstream version (e.g. `sonarr:4.0.20.3014`).
-
 ## How it works
 
 A GitHub Actions workflow runs daily, checks the latest upstream release of
@@ -21,8 +19,12 @@ each app and builds any version that is not published yet. Every image is
 started under QEMU and must answer on its HTTP port before it is pushed
 (Sonarr, Radarr and Jellyfin: must reach a startup log line instead, because
 they hang or crash later in startup under QEMU only; real hardware is fine).
-All images are rebuilt weekly to pick up base-image updates, so tools like
-Watchtower keep them current.
+An image is also rebuilt when one of its inputs changes (a base image
+update, its Dockerfile or build arguments), so tools like Watchtower keep them
+current without restarting containers for nothing.
+
+Tags: `latest`, the upstream version and `<version>-<YYYYMMDD>` per build. To
+roll back a bad build, pin the dated tag of the previous build.
 
 ## Usage
 

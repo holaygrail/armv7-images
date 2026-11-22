@@ -2,8 +2,9 @@ name: build
 
 on:
   schedule:
-    - cron: "17 2 * * *"   # daily: build new upstream releases
-    - cron: "47 3 * * 6"   # Saturday: rebuild everything (base image updates)
+    # daily: build new upstream releases and images whose inputs changed
+    # (base image update, Dockerfile change); see scripts/check.py
+    - cron: "17 2 * * *"
   workflow_dispatch:
     inputs:
       apps:
@@ -52,7 +53,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPS: ${{ github.event.inputs.apps }}
-          FORCE: ${{ github.event.inputs.force == 'true' || github.event.schedule == '47 3 * * 6' || github.event_name == 'push' }}
+          FORCE: ${{ github.event.inputs.force == 'true' }}
         run: |
           matrix=$(python3 scripts/check.py)
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
@@ -109,12 +110,19 @@ jobs:
           build-args: ${{ steps.args.outputs.args }}
           load: true
           tags: local/${{ matrix.app }}:test
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ matrix.version }}
+            org.opencontainers.image.title=${{ matrix.app }}
+            org.opencontainers.image.description=${{ matrix.app }} ${{ matrix.version }} for linux/arm/v7, built from https://github.com/${{ matrix.upstream }}
+            io.github.holaygrail.armv7.inputs=${{ matrix.inputs }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
 
       - name: Smoke test (start under emulation, wait for HTTP or a log line)
         env:
           SMOKE_LOG: ${{ matrix.smoke_log }}
+          SMOKE_MAY_EXIT: ${{ matrix.smoke_may_exit }}
         run: |
           smoke() {
             docker rm -f smoke >/dev/null 2>&1 || true
@@ -126,6 +134,9 @@ jobs:
                  { [ -z "$SMOKE_LOG" ] && curl -fsS -o /dev/null "http://127.0.0.1:${{ matrix.port }}${{ matrix.health }}"; }; then
                 echo "up after $((i*5))s"; sleep 30
                 docker logs smoke 2>&1 | tail -20
+                if [ "$SMOKE_MAY_EXIT" != "true" ] && [ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]; then
+                  echo "container exited after startup"; return 1
+                fi
                 if docker logs smoke 2>&1 | grep -E "RemoteCertificateChainErrors|SSL connection could not be established|Unhandled Rejection|Traceback \(most recent"; then
                   echo "errors in startup log"; return 1
                 fi
@@ -155,21 +166,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Push exactly the image that passed the smoke test. The dated tag (one per
+      # build day) stays as rollback point: pin it instead of :latest.
       - name: Push
-        uses: docker/build-push-action@v7
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/arm/v7
-          build-args: ${{ steps.args.outputs.args }}
-          push: true
-          provenance: false
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:${{ matrix.version }}
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:latest
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.version=${{ matrix.version }}
-            org.opencontainers.image.title=${{ matrix.app }}
-            org.opencontainers.image.description=${{ matrix.app }} ${{ matrix.version }} for linux/arm/v7, built from https://github.com/${{ matrix.upstream }}
-          cache-from: type=gha,scope=${{ matrix.app }}
+        run: |
+          image=${{ env.IMAGE_PREFIX }}/${{ matrix.app }}
+          for tag in "${{ matrix.version }}" "${{ matrix.version }}-$(date -u +%Y%m%d)" latest; do
+            docker tag local/${{ matrix.app }}:test "$image:$tag"
+            docker push -q "$image:$tag"
+          done
